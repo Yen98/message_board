@@ -1,6 +1,5 @@
-from pickle import NONE
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
 
 class User(BaseModel):
     username: str
@@ -11,12 +10,15 @@ class UserOut(BaseModel):
 
 class Message(BaseModel):
     author: str
-    topic: str
     content: str
     key: Optional[list] = None
+    
+class room(BaseModel):
+    room_name: str
+    users: List[User]
+    messages: List[Message]
 
 class MessageOut(BaseModel):
     author: str
-    topic: str
     content: str
 
