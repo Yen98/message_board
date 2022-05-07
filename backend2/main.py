@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from database import find_all_message, create_a_room, get_a_room_info, write_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
+from database import create_a_user, find_all_message, create_a_room, get_a_room_info, create_a_post, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
 
-from model import Room, Message, Messages
+from model import Room, Message, User, Post, RoomOut, UserOut, PostOut
 
 origins = [
     "http://localhost:3000",
@@ -38,27 +38,34 @@ async def get_message_by_id(id: str):
     response = await find_message_with_id(id)
     return response
 
-@app.post('/room', response_model=Room)
+@app.post('/account', response_model=UserOut)
+async def create_account(user: User):
+    response = await create_a_user(user.dict())
+    if response:
+        return response
+    return HTTPException(400, "Something went wrong")
+
+@app.post('/room', response_model=RoomOut)
 async def create_room(room: Room):
     response = await create_a_room(room.dict())
     if response:
         return response
     return HTTPException(400, "Something went wrong")
 
-@app.post('/message', response_model=Message)
-async def create_a_message(message: Message):
-    response = await write_a_message(message.dict())
+@app.post('/post', response_model=PostOut)
+async def create_post(post: Post):
+    response = await create_a_post(post.dict())
     if response:
         return response
     return HTTPException(400, "Something went wrong")
 
-@app.post('/many_message')
-async def create_many_message(message: Messages):
-    for m in message.message:
-        response = await write_a_message(m.dict())
-    if response:
-        return {"haha"}
-    return HTTPException(400, "Something went wrong")
+# @app.post('/many_message')
+# async def create_many_message(message: Messages):
+#     for m in message.message:
+#         response = await write_a_message(m.dict())
+#     if response:
+#         return {"haha"}
+#     return HTTPException(400, "Something went wrong")
 
 @app.delete('/delete/message/{id}')
 async def erase_message(id: str):
