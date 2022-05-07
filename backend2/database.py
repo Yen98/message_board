@@ -1,3 +1,5 @@
+from array import array
+from typing import List
 from model import Room, Message
 import motor.motor_asyncio
 import re
@@ -7,6 +9,7 @@ client = motor.motor_asyncio.AsyncIOMotorClient('mongodb+srv://yenbo98:yenbo98@c
 database = client.Chat_Room
 room_collection = database.room
 message_collection = database.message
+user_collection = database.user
 
 async def create_a_room(room):
     document = room
@@ -14,6 +17,15 @@ async def create_a_room(room):
     document["conversation"] = []
     result = await room_collection.insert_one(document)
     return document
+
+async def find_all_message():
+    messages = []
+    result = room_collection.find({}, {"conversation": 0})
+    async for document in result:
+        document["_id"] = str(document["_id"])
+        messages.append(document)
+    return messages
+
 
 async def get_a_room_info(room_name):
     document = await room_collection.find_one({"name": room_name}, {"_id": 0, "name": 1, "key": 1, "users": 1, "number_of_messages": 1})

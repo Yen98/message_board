@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from database import create_a_room, get_a_room_info, write_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
+from database import find_all_message, create_a_room, get_a_room_info, write_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
 
 from model import Room, Message, Messages
 
@@ -73,4 +73,9 @@ async def close_room(name: str):
     if response:
         return "Successfully deleted room"
     raise HTTPException(404, f"There is no room name {name}")
+
+@app.get('/all_message')
+async def get_all_messages():
+    response = await find_all_message()
+    return response
 
