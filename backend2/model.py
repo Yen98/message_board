@@ -1,21 +1,47 @@
 from array import array
+from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional
 
 class User(BaseModel):
-    name: str
-    password: str
+    userName: str
+    passWord: str
+    createTime: datetime
 
-class Message(BaseModel):
-    room_name: str
-    writtenby: str
-    content: str
-
-class Messages(BaseModel):
-    message: List[Message]
+class UserOut(BaseModel):
+    userName: str
+    createTime: datetime
 
 class Room(BaseModel):
-    name: str
-    key: str
-    users: List[str]
+    topic: str
+    pwd: str
+    creatorId: str
+    createTime: datetime
+
+class RoomOut(BaseModel):
+    topic: str
+    creatorId: str
+    createTime: datetime
+
+class Post(BaseModel):
+    roomId: str
+    createTime: datetime
+    writtenBy: str
+    content: str
+
+class PostOut(BaseModel):
+    createTime: datetime
+    writtenBy: str
+    content: str
+
+class Message(BaseModel):
+    parentId: str
+    createTime: datetime
+    writtenBy: str
+    text: str
+
+class MessageOut(BaseModel):
+    createTime: datetime
+    text: str
+
 

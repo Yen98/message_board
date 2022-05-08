@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from database import create_a_room, get_a_room_info, write_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
+from database import show_all_post, show_all_room, join_a_room, create_a_user, create_a_post, create_a_room, get_a_room_info, create_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
 
-from model import Room, Message, Messages
+from model import Room, Message, UserOut, User, RoomOut, Post, PostOut, MessageOut
 
 origins = [
     "http://localhost:3000",
@@ -18,9 +18,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get('/room/{room_name}')
-async def get_room_info(room_name: str):
-    response = await get_a_room_info(room_name)
+# @app.get('/room/{room_name}')
+# async def get_room_info(room_name: str):
+#     response = await get_a_room_info(room_name)
+#     return response
+
+@app.get('/show/room')
+async def get_all_room():
+    response = await show_all_room()
+    return response
+
+@app.get('/show/post')
+async def get_all_post(roomId: str):
+    response = await show_all_post(roomId)
     return response
 
 @app.get('/message/{room_name}')
@@ -38,26 +48,39 @@ async def get_message_by_id(id: str):
     response = await find_message_with_id(id)
     return response
 
-@app.post('/room', response_model=Room)
+@app.post('/user', response_model=UserOut)
+async def create_account(user: User):
+    response = await create_a_user(user.dict())
+    if response:
+        return response
+    return HTTPException(400, "Something went wrong")
+
+@app.post('/room', response_model=RoomOut)
 async def create_room(room: Room):
     response = await create_a_room(room.dict())
     if response:
         return response
     return HTTPException(400, "Something went wrong")
 
-@app.post('/message', response_model=Message)
-async def create_a_message(message: Message):
-    response = await write_a_message(message.dict())
+@app.post('/post', response_model=PostOut)
+async def create_post(post: Post):
+    response = await create_a_post(post.dict())
     if response:
         return response
     return HTTPException(400, "Something went wrong")
 
-@app.post('/many_message')
-async def create_many_message(message: Messages):
-    for m in message.message:
-        response = await write_a_message(m.dict())
+@app.post('/message', response_model=MessageOut)
+async def create_message(message: Message):
+    response = await create_a_message(message.dict())
     if response:
-        return {"haha"}
+        return response
+    return HTTPException(400, "Something went wrong")
+
+@app.put('/join')
+async def join_room(roomId: str, userId: str):
+    response = await join_a_room(roomId, userId)
+    if response:
+        return response
     return HTTPException(400, "Something went wrong")
 
 @app.delete('/delete/message/{id}')
