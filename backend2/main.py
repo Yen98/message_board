@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from database import show_all_post, show_all_room, join_a_room, create_a_user, create_a_post, create_a_room, get_a_room_info, create_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
+from database import log_in_check, show_all_message, show_all_post, show_all_room, join_a_room, create_a_user, create_a_post, create_a_room, get_a_room_info, create_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
 
 from model import Room, Message, UserOut, User, RoomOut, Post, PostOut, MessageOut
 
@@ -33,20 +33,30 @@ async def get_all_post(roomId: str):
     response = await show_all_post(roomId)
     return response
 
-@app.get('/message/{room_name}')
-async def get_recent_message(room_name: str):
-    response = await find_message(room_name, 11671, 11681)
+@app.get('/show/message')
+async def get_all_message(parentId: str):
+    response = await show_all_message(parentId)
     return response
 
-@app.get('/message/keyword/{room_name}')
-async def serach_message(room_name: str, keyword: str):
-    response = await find_message_with_tag(room_name, keyword)
+@app.get('/login')
+async def login(userName: str, passWord: str):
+    response = await log_in_check(userName, passWord)
     return response
 
-@app.get('/find/{id}')
-async def get_message_by_id(id: str):
-    response = await find_message_with_id(id)
-    return response
+# @app.get('/message/{room_name}')
+# async def get_recent_message(room_name: str):
+#     response = await find_message(room_name, 11671, 11681)
+#     return response
+
+# @app.get('/message/keyword/{room_name}')
+# async def serach_message(room_name: str, keyword: str):
+#     response = await find_message_with_tag(room_name, keyword)
+#     return response
+
+# @app.get('/find/{id}')
+# async def get_message_by_id(id: str):
+#     response = await find_message_with_id(id)
+#     return response
 
 @app.post('/user', response_model=UserOut)
 async def create_account(user: User):
@@ -83,17 +93,16 @@ async def join_room(roomId: str, userId: str):
         return response
     return HTTPException(400, "Something went wrong")
 
-@app.delete('/delete/message/{id}')
-async def erase_message(id: str):
-    response = await delete_message(id)
-    if response:
-        return "Successfully deleted message"
-    raise HTTPException(404, f"There is no message with id {id}")
+# @app.delete('/delete/message/{id}')
+# async def erase_message(id: str):
+#     response = await delete_message(id)
+#     if response:
+#         return "Successfully deleted message"
+#     raise HTTPException(404, f"There is no message with id {id}")
 
-@app.delete('/delete/room/{name}}')
-async def close_room(name: str):
-    response = await delete_room(name)
-    if response:
-        return "Successfully deleted room"
-    raise HTTPException(404, f"There is no room name {name}")
-
+# @app.delete('/delete/room/{name}}')
+# async def close_room(name: str):
+#     response = await delete_room(name)
+#     if response:
+#         return "Successfully deleted room"
+#     raise HTTPException(404, f"There is no room name {name}")
