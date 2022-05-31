@@ -9,6 +9,7 @@ class User(BaseModel):
     createTime: datetime
 
 class UserOut(BaseModel):
+    userId: str
     userName: str
     createTime: datetime
 
@@ -35,6 +36,7 @@ class PostOut(BaseModel):
     content: str
 
 class Message(BaseModel):
+    parentType: str
     parentId: str
     createTime: datetime
     writtenBy: str

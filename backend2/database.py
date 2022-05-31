@@ -14,6 +14,7 @@ async def create_a_user(user):
     document["followingRoom"] = []
     document["ownRoom"] = []
     result = await user_collection.insert_one(document)
+    user["userId"] = str(result.inserted_id)
     return user
 
 async def create_a_room(room):
@@ -35,8 +36,10 @@ async def create_a_message(message):
     document = message
     document["numMessage"] = 0
     result = await message_collection.insert_one(document)
-    result2 = await post_collection.update_one({"_id": ObjectId(document["parentId"])}, {"$inc": {"numMessage": 1}})
-    result2 = await message_collection.update_one({"_id": ObjectId(document["parentId"])}, {"$inc": {"numMessage": 1}})
+    if document["parentType"] == "post":
+        result2 = await post_collection.update_one({"_id": ObjectId(document["parentId"])}, {"$inc": {"numMessage": 1}})
+    elif document["parentType"] == "message":
+        result2 = await message_collection.update_one({"_id": ObjectId(document["parentId"])}, {"$inc": {"numMessage": 1}})
     return document
 
 async def join_a_room(roomId, userId):
@@ -63,6 +66,15 @@ async def show_all_room():
         rooms.append(document)
     return rooms
 
+async def show_follow_room(userId):
+    rooms = []
+    result = await user_collection.find_one({"_id": ObjectId(userId)}, {"_id": 0, "followingRoom": 1})
+    for roomId in result["followingRoom"]:
+        document = await room_collection.find_one({"_id": ObjectId(roomId)})
+        document["_id"] = str(document["_id"])
+        rooms.append(document)
+    return rooms
+
 async def show_all_post(roomId):
     posts = []
     result = post_collection.find({"roomId": ObjectId(roomId)})
@@ -72,9 +84,9 @@ async def show_all_post(roomId):
     return posts
 
 
-async def show_all_message(parentId):
+async def show_all_message(parentType, parentId):
     messages = []
-    result = message_collection.find({"parentId": ObjectId(parentId)})
+    result = message_collection.find({"parentType": parentType, "parentId": ObjectId(parentId)})
     async for document in result:
         document["_id"] = str(document["_id"])
         messages.append(document)

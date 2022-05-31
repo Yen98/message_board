@@ -1,6 +1,7 @@
+from urllib import response
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from database import log_in_check, show_all_message, show_all_post, show_all_room, join_a_room, create_a_user, create_a_post, create_a_room, get_a_room_info, create_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
+from database import log_in_check, show_follow_room, show_all_message, show_all_post, show_all_room, join_a_room, create_a_user, create_a_post, create_a_room, get_a_room_info, create_a_message, find_message, find_message_with_tag, find_message_with_id, delete_message, delete_room
 
 from model import Room, Message, UserOut, User, RoomOut, Post, PostOut, MessageOut
 
@@ -28,14 +29,20 @@ async def get_all_room():
     response = await show_all_room()
     return response
 
+@app.get('/show/room/{userId}')
+async def get_user_room(userId: str):
+    response = await show_follow_room(userId)
+    return response
+
+
 @app.get('/show/post')
 async def get_all_post(roomId: str):
     response = await show_all_post(roomId)
     return response
 
 @app.get('/show/message')
-async def get_all_message(parentId: str):
-    response = await show_all_message(parentId)
+async def get_all_message(parentType: str, parentId: str):
+    response = await show_all_message(parentType, parentId)
     return response
 
 @app.get('/login')
