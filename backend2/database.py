@@ -2,7 +2,7 @@ from model import Room, Message
 import motor.motor_asyncio
 from bson.objectid import ObjectId
 
-client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://superuser:yenbo98@localhost:27017')
+client = motor.motor_asyncio.AsyncIOMotorClient('mongodb+srv://yenbo98:yenbo98@cluster0.1od1a.mongodb.net/?retryWrites=true&w=majority')
 database = client.TEST
 user_collection = database.User
 room_collection = database.Room
@@ -23,6 +23,7 @@ async def create_a_room(room):
     document["numFollower"] = 1
     result = await room_collection.insert_one(document)
     result2 = await user_collection.update_one({"_id": ObjectId(document["creatorId"])}, {"$push": {"ownRoom": str(result.inserted_id), "followingRoom": str(result.inserted_id)}})
+    room["roomId"] = str(result.inserted_id)
     return room
 
 async def create_a_post(post):
@@ -30,7 +31,8 @@ async def create_a_post(post):
     document["numMessage"] = 0
     result = await post_collection.insert_one(document)
     result2 = await room_collection.update_one({"_id": ObjectId(document["roomId"])}, {"$inc": {"numPost": 1}})
-    return document
+    post["postId"] = str(result.inserted_id)
+    return post
 
 async def create_a_message(message):
     document = message
@@ -40,12 +42,18 @@ async def create_a_message(message):
         result2 = await post_collection.update_one({"_id": ObjectId(document["parentId"])}, {"$inc": {"numMessage": 1}})
     elif document["parentType"] == "message":
         result2 = await message_collection.update_one({"_id": ObjectId(document["parentId"])}, {"$inc": {"numMessage": 1}})
+    message["messageId"] = str(result.inserted_id)
     return document
 
 async def join_a_room(roomId, userId):
     result = await room_collection.update_one({"_id": ObjectId(roomId)}, {"$inc": {"numFollower": 1}})
     result2 = await user_collection.update_one({"_id": ObjectId(userId)}, {"$push": {"followingRoom": roomId}})
     return {"join": "success"}
+
+async def disjoin_a_room(roomId, userId):
+    result = await room_collection.update_one({"_id": ObjectId(roomId)}, {"$inc": {"numFollower": -1}})
+    result2 = await user_collection.update_one({"_id": ObjectId(userId)}, {"$pull": {"followingRoom": roomId, "ownRoom": roomId}})
+    return {"disjoin": "success"}
 
 async def log_in_check(userName, passWord):
     document = await user_collection.find_one({"userName": userName})
@@ -75,9 +83,17 @@ async def show_follow_room(userId):
         rooms.append(document)
     return rooms
 
+async def show_all_user():
+    users = []
+    result = user_collection.find({})
+    async for document in result:
+        document["_id"] = str(document["_id"])
+        users.append(document)
+    return users
+
 async def show_all_post(roomId):
     posts = []
-    result = post_collection.find({"roomId": ObjectId(roomId)})
+    result = post_collection.find({"roomId": roomId})
     async for document in result:
         document["_id"] = str(document["_id"])
         posts.append(document)
@@ -86,42 +102,79 @@ async def show_all_post(roomId):
 
 async def show_all_message(parentType, parentId):
     messages = []
-    result = message_collection.find({"parentType": parentType, "parentId": ObjectId(parentId)})
+    result = message_collection.find({"parentType": parentType, "parentId": parentId})
     async for document in result:
         document["_id"] = str(document["_id"])
         messages.append(document)
     return messages
 
-async def get_a_room_info(room_name):
-    document = await room_collection.find_one({"topic": room_name}, {"_id": 0, "creatorId": 0})
-    return document
+
+async def delete_room(roomId):
+    room = await room_collection.find_one({"_id": ObjectId(roomId)})
+    result = await room_collection.update_one({"_id": ObjectId(post["roomId"])}, {"$inc": {"numPost": -1}})
+    result2 = message_collection.find({"parentType": "post", "parentId": postId}, {"_id": 1})
+    async for document in result2:
+        await delete_message(str(document["_id"]))
+    await post_collection.delete_one({"_id": ObjectId(postId)})
+    return True
+
+async def delete_message(messageId):
+    message = await message_collection.find_one({"_id": ObjectId(messageId)})
+    if message["parentType"] == "post":
+        result = await post_collection.update_one({"_id": ObjectId(message["parentId"])}, {"$inc": {"numMessage": -1}})
+    elif message["parentType"] == "message":
+        result = await message_collection.update_one({"_id": ObjectId(message["parentId"])}, {"$inc": {"numMessage": -1}})
+    result2 = message_collection.find({"parentType": "message", "parentId": messageId}, {"_id": 1})
+    async for document in result2:
+        await delete_message(str(document["_id"]))
+    await message_collection.delete_one({"_id": ObjectId(messageId)})
+    return True
+
+async def delete_post(postId):
+    post = await post_collection.find_one({"_id": ObjectId(postId)})
+    result = await room_collection.update_one({"_id": ObjectId(post["roomId"])}, {"$inc": {"numPost": -1}})
+    result2 = message_collection.find({"parentType": "post", "parentId": postId}, {"_id": 1})
+    async for document in result2:
+        await delete_message(str(document["_id"]))
+    await post_collection.delete_one({"_id": ObjectId(postId)})
+    return True
+
+async def delete_room(roomId):
+    room = await room_collection.find_one({"_id": ObjectId(roomId)})
+    result = await user_collection.update_one({"_id": ObjectId(room["creatorId"])}, {"$pull": {"followingRoom": roomId, "ownRoom": roomId}})
+    result2 = post_collection.find({"roomId": roomId}, {"_id": 1})
+    async for document in result2:
+        await delete_post(str(document["_id"]))
+    await room_collection.delete_one({"_id": ObjectId(roomId)})
+    return True
 
 
-async def find_message(room_name, begin, end):
-    messages = []
-    room = await room_collection.find_one({"name": room_name})
-    for i in range(begin, end):
-        document = await message_collection.find_one({"_id": room["conversation"][i]}, {"_id": 0})
-        messages.append(document)
-    return messages
+async def get_user_name(userId):
+    user = await user_collection.find_one({"_id": ObjectId(userId)}, {"_id": 0, "userName": 1})
+    return user
 
-async def find_message_with_tag(room_name, tag):
-    messages = []
-    result = message_collection.find( { "$text": { "$search": tag }}, {"_id": 0} ).limit(50)
+async def find_room(tag):
+    rooms = []
+    result = room_collection.find({"topic": {"$regex": tag}})
     async for document in result:
-        messages.append(document)
-    return messages
+        document["_id"] = str(document["_id"])
+        rooms.append(document)
+    return rooms
 
-async def find_message_with_id(id):
-    document = await message_collection.find_one({"_id": ObjectId(id)}, {"_id": 0})
-    return document
+async def find_post(roomId, tag):
+    posts = []
+    result = post_collection.find({"roomId": roomId, "content": {"$regex": tag}})
+    async for document in result:
+        document["_id"] = str(document["_id"])
+        posts.append(document)
+    return posts
 
-async def delete_message(id):
-    result = await room_collection.update_one({"conversation": ObjectId(id)}, {"$inc": {"number_of_messages": -1}, "$pull": {"conversation": ObjectId(id)}})
-    await message_collection.delete_one({"_id": ObjectId(id)})
-    return True
+async def revise_post(postId, new_content):
+    await post_collection.update_one({"_id": ObjectId(postId)}, {"$set": {"content": new_content}})
+    return {"update": "success"}
 
-async def delete_room(name):
-    await room_collection.delete_one({"name": name})
-    await message_collection.delete_many({"room_name": name})
-    return True
+async def revise_message(messageId, new_text):
+    await message_collection.update_one({"_id": ObjectId(messageId)}, {"$set": {"text": new_text}})
+    return {"update": "success"}
+
+

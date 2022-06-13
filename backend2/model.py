@@ -20,6 +20,7 @@ class Room(BaseModel):
     createTime: datetime
 
 class RoomOut(BaseModel):
+    roomId: str
     topic: str
     creatorId: str
     createTime: datetime
@@ -31,6 +32,7 @@ class Post(BaseModel):
     content: str
 
 class PostOut(BaseModel):
+    postId: str
     createTime: datetime
     writtenBy: str
     content: str
@@ -43,6 +45,7 @@ class Message(BaseModel):
     text: str
 
 class MessageOut(BaseModel):
+    messageId: str
     createTime: datetime
     text: str
 
